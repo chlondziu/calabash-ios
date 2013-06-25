@@ -12,6 +12,8 @@ module Calabash
                           Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::ECONNABORTED,
                           Errno::ETIMEDOUT]
 
+      $device_url = ""
+
       def macro(txt)
         if self.respond_to? :step
           step(txt)
@@ -29,6 +31,7 @@ module Calabash
       end
 
       def server_version
+
         JSON.parse(http(:path => 'version'))
       end
 
@@ -389,7 +392,6 @@ EOF
         post_data<< %Q|,"reverse":#{options[:reverse]}| if options[:reverse]
         post_data<< %Q|,"prototype":"#{options[:prototype]}"| if options[:prototype]
         post_data << "}"
-
         res = http({:method => :post, :raw => true, :path => 'play'}, post_data)
 
         res = JSON.parse(res)
@@ -419,10 +421,12 @@ EOF
       end
 
       def record_begin
+
         http({:method => :post, :path => 'record'}, {:action => :start})
       end
 
       def record_end(file_name)
+
         res = http({:method => :post, :path => 'record'}, {:action => :stop})
         File.open("_recording.plist", 'wb') do |f|
           f.write res
@@ -459,6 +463,7 @@ EOF
             :selector => sel,
             :arg => arg
         }
+
         res = http({:method => :post, :path => 'backdoor'}, json)
         res = JSON.parse(res)
         if res['outcome'] != 'SUCCESS'
@@ -471,6 +476,7 @@ EOF
         # Exiting the app shuts down the HTTP connection and generates ECONNREFUSED,
         # or HTTPClient::KeepAliveDisconnected
         # which needs to be suppressed.
+
         begin
           http({:method =>:post, :path => 'exit', :retryable_errors => RETRYABLE_ERRORS - [Errno::ECONNREFUSED,HTTPClient::KeepAliveDisconnected]})
         rescue Errno::ECONNREFUSED, HTTPClient::KeepAliveDisconnected
@@ -506,7 +512,7 @@ EOF
 
       def stop_test_server
         if @calabash_launcher
-           @calabash_launcher.stop
+          @calabash_launcher.stop
         end
       end
 
@@ -539,8 +545,17 @@ EOF
       end
 
 
+      def set_device_url(new_device_url)
+        $device_url = new_device_url
+      end
+
+
       def url_for(verb)
-        url = URI.parse(ENV['DEVICE_ENDPOINT']|| "http://localhost:37265")
+        if $device_url=="" or $device_url.nil?
+          url = URI.parse(ENV['DEVICE_ENDPOINT']|| "http://localhost:37265")
+        else
+          url = URI.parse($device_url)
+        end
         path = url.path
         if path.end_with? "/"
           path = "#{path}#{verb}"
